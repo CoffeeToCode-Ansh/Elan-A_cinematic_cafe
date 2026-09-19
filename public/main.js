@@ -308,7 +308,7 @@ const formFeedback = document.getElementById('formFeedback');
 
 // Point this at your deployed backend (see the elan-contact-api project).
 // Leave as '' while developing the site alone; set it once the API is live.
-const API_BASE_URL = ''; // e.g. 'https://elan-contact-api.vercel.app'
+const API_BASE_URL = 'https://elan-a-cinematic-cafe-vert.vercel.app/';
 
 function setFeedback(html, isError) {
   formFeedback.classList.add('visible');
@@ -358,11 +358,7 @@ reserveForm.addEventListener('submit', async (e) => {
   };
 
   try {
-    if (!API_BASE_URL) {
-      // No backend configured yet — keep the form usable during development
-      // without silently pretending an email was sent to a real inbox.
-      throw new Error('NO_API_CONFIGURED');
-    }
+     const endpoint = API_BASE_URL ? `${API_BASE_URL}/api/contact` : '/api/contact';
 
     const response = await fetch(`${API_BASE_URL}/api/contact`, {
       method: 'POST',
