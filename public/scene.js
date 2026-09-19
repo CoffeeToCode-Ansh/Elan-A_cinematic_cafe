@@ -60,7 +60,7 @@ if (canvas) {
     const body = new CANNON.Body({ mass: 0, material: wallMaterial });
     body.addShape(new CANNON.Plane());
     body.position.copy(pos);
-    body.quaternion.setFromUnitVectors(new CANNON.Vec3(0, 0, 1), normal);
+    body.quaternion.setFromVectors(new CANNON.Vec3(0, 0, 1), normal);
     world.addBody(body);
   }
   addWall(new CANNON.Vec3(0, -bounds.y, 0), new CANNON.Vec3(0, 1, 0));
