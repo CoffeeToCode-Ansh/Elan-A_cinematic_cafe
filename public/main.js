@@ -306,9 +306,26 @@ resetVoiceTimer();
 const reserveForm = document.getElementById('reserveForm');
 const formFeedback = document.getElementById('formFeedback');
 
-// Point this at your deployed backend (see the elan-contact-api project).
-// Leave as '' while developing the site alone; set it once the API is live.
-const API_BASE_URL = 'https://elan-a-cinematic-cafe-vert.vercel.app/';
+/*
+ * Where the reservation API lives.
+ *
+ *  - Deployed on Vercel: '' (empty) → the form posts to "/api/contact" on the
+ *    SAME site it was loaded from. Works on the production URL, branch
+ *    aliases and preview deployments, and needs no CORS setup.
+ *  - Local development: the page is served on a different port than the API
+ *    (e.g. localhost:3000 or Live Server on :5500), so it must call the API
+ *    at http://localhost:4000 (run `npm run dev` in the API folder, and add
+ *    the page's origin to ALLOWED_ORIGIN in .env).
+ *
+ * Never end this value with a "/" — it would produce "//api/contact",
+ * which Vercel redirects, and browsers reject redirects on CORS preflights.
+ */
+const API_BASE_URL = (() => {
+  const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
+  return isLocal && location.port !== '4000' ? 'http://localhost:4000' : '';
+})().replace(/\/+$/, '');
+
+const CONTACT_ENDPOINT = `${API_BASE_URL}/api/contact`;
 
 function setFeedback(html, isError) {
   formFeedback.classList.add('visible');
@@ -357,15 +374,19 @@ reserveForm.addEventListener('submit', async (e) => {
     company: '', // honeypot — always empty for real users
   };
 
-  try {
-     const endpoint = API_BASE_URL ? `${API_BASE_URL}/api/contact` : '/api/contact';
+  // Give up after 20s so the button never stays stuck on "Sending…"
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-    const response = await fetch(`${API_BASE_URL}/api/contact`, {
+  try {
+    const response = await fetch(CONTACT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
+      signal: controller.signal,
     });
 
+    // The API always answers in JSON, but be safe if something else replies (e.g. an HTML 404)
     const result = await response.json().catch(() => ({}));
 
     if (response.ok && result.success) {
@@ -383,12 +404,13 @@ reserveForm.addEventListener('submit', async (e) => {
       setFeedback('<i class="fas fa-exclamation-circle"></i> ' + (result.error || 'Something went wrong. Please try again.'), true);
     }
   } catch (err) {
-    if (err.message === 'NO_API_CONFIGURED') {
-      setFeedback('<i class="fas fa-exclamation-circle"></i> Reservations aren\'t connected yet — set API_BASE_URL in main.js once the backend is deployed.', true);
+    if (err.name === 'AbortError') {
+      setFeedback('<i class="fas fa-exclamation-circle"></i> The request took too long. Please try again.', true);
     } else {
       setFeedback('<i class="fas fa-exclamation-circle"></i> Couldn\'t reach the server. Please check your connection and try again.', true);
     }
   } finally {
+    clearTimeout(timeoutId);
     submitBtn.disabled = false;
     submitBtn.innerHTML = originalBtnHTML;
   }
