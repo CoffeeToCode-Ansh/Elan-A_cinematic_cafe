@@ -169,11 +169,27 @@ function readPartySize(raw) {
   return { value: n };
 }
 
+// A name must start with a letter, may then contain letters (any language),
+// combining marks, spaces, apostrophes, periods and hyphens — and must have
+// at least two actual letters. This rejects "-------", "12345", "!!!", "...".
+const NAME_PATTERN = /^\p{L}[\p{L}\p{M} '’.\-]*$/u;
+
+function isValidName(name) {
+  if (!NAME_PATTERN.test(name)) return false;
+  const letters = name.match(/\p{L}/gu) || [];
+  return letters.length >= 2;
+}
+
 function validateReservation(body) {
   const errors = {};
 
   const name = readText(body.fullName, { label: 'Full name', required: true, ...LIMITS.fullName });
-  if (name.error) errors.fullName = name.error;
+  if (name.error) {
+    errors.fullName = name.error;
+  } else if (!isValidName(name.value)) {
+    errors.fullName =
+      'Please enter your real name — letters, spaces, hyphens, apostrophes and periods only.';
+  }
 
   const email = readText(body.emailAddr, { label: 'Email address', required: true, ...LIMITS.emailAddr });
   if (email.error) {
