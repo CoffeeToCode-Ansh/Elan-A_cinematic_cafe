@@ -327,6 +327,14 @@ const API_BASE_URL = (() => {
 
 const CONTACT_ENDPOINT = `${API_BASE_URL}/api/contact`;
 
+// Same rule as the server: starts with a letter, only letters / spaces /
+// hyphens / apostrophes / periods, and at least two actual letters.
+// Rejects things like "-------" or "12345".
+function isValidName(name) {
+  if (!/^\p{L}[\p{L}\p{M} '’.\-]*$/u.test(name)) return false;
+  return (name.match(/\p{L}/gu) || []).length >= 2;
+}
+
 function setFeedback(html, isError) {
   formFeedback.classList.add('visible');
   formFeedback.classList.toggle('error', !!isError);
@@ -345,6 +353,9 @@ reserveForm.addEventListener('submit', async (e) => {
 
     if (input.type === 'email' && fieldValid) {
       fieldValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.value.trim());
+    }
+    if (input.id === 'fullName' && fieldValid) {
+      fieldValid = isValidName(input.value.trim());
     }
     if (input.type === 'number' && fieldValid) {
       const n = Number(input.value);
